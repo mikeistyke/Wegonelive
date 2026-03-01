@@ -12,6 +12,21 @@ View your app in AI Studio: https://ai.studio/apps/749c233c-ff26-4e21-a652-ea417
 
 For approved, user-visible behavior changes, update the relevant README section and include a `Last validated: YYYY-MM-DD` line.
 
+## Security Quick Check (Before GitHub Push)
+
+Use this quick routine before every push or web upload:
+
+1. Keep real secrets only in `.env.local`.
+2. Keep placeholders only in `.env.example`.
+3. Run the scan command:
+   `npm run scan:secrets`
+4. Push only if the scan says:
+   `Secret scan passed: no high-risk patterns found in tracked files.`
+
+If the scan fails, remove or replace the flagged secret line, then run the command again.
+
+Last validated: `2026-03-01`
+
 ## Run Locally
 
 **Prerequisites:**  Node.js
