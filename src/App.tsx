@@ -42,11 +42,9 @@ export default function App() {
             <Route
               path="/live"
               element={
-                <ProtectedRoute>
-                  <LiveShoppingAccessRoute>
-                    <LiveShopping />
-                  </LiveShoppingAccessRoute>
-                </ProtectedRoute>
+                <LiveShoppingAccessRoute>
+                  <LiveShopping />
+                </LiveShoppingAccessRoute>
               }
             />
             <Route path="/about" element={<About />} />

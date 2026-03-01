@@ -650,6 +650,10 @@ export default function LiveShopping() {
   const handleBid = async (e: FormEvent) => {
     e.preventDefault();
     if (!guest) return;
+    if (!isAuctionLive) {
+      setError("Bidding opens when the stream is LIVE.");
+      return;
+    }
     if (isBiddingStopped) {
       setError("Bidding has ended for this item.");
       return;
@@ -2463,10 +2467,12 @@ export default function LiveShopping() {
                           placeholder="Enter bid amount..."
                           value={bidAmount}
                           onChange={(e) => setBidAmount(e.target.value)}
+                          disabled={!isAuctionLive || isBiddingStopped}
                           className="w-full rounded-full border border-zinc-700 bg-zinc-950 py-4 pl-12 pr-16 text-lg font-bold text-white placeholder-zinc-600 focus:border-[#20B2AA] focus:outline-none focus:ring-1 focus:ring-[#20B2AA]"
                         />
                         <button
                           type="submit"
+                          disabled={!isAuctionLive || isBiddingStopped}
                           className="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#20B2AA] text-zinc-950 transition-transform hover:scale-105 active:scale-95"
                         >
                           <Send className="h-5 w-5" />
