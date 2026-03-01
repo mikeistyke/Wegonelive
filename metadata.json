@@ -1,0 +1,5 @@
+{
+  "name": "wegonelive",
+  "description": "Live Shopping & Digital Storytelling Platform",
+  "requestFramePermissions": ["camera", "microphone"]
+}
