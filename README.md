@@ -20,6 +20,8 @@ Use this quick routine before every push or web upload:
 2. Keep placeholders only in `.env.example`.
 3. Run the scan command:
    `npm run scan:secrets`
+   - On Windows PowerShell, if script execution is blocked, use:
+     `npm.cmd run scan:secrets`
 4. Push only if the scan says:
    `Secret scan passed: no high-risk patterns found in tracked files.`
 
