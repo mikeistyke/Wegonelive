@@ -5,6 +5,7 @@ import AgoraRTC, { type IAgoraRTCClient, type ICameraVideoTrack, type IMicrophon
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useEbaySearch } from "../hooks/useEbaySearch";
 import { fetchLiveWindowStatus, getRegisteredGuest, setRegisteredGuest } from "../lib/liveAccess";
+import { ATE_NO_MATCH_RESPONSE, findAteQuickAnswer } from "../lib/ateQaModel";
 
 interface Guest {
   id: number;
@@ -499,7 +500,7 @@ export default function LiveShopping() {
           const data = await res.json() as AuctionNotice[];
           setAuctionNotices(data);
           const latestPresenterNotice = data.find((notice) =>
-            notice.notice_type === "presenter_alert" || notice.notice_type === "minimum_price_interest"
+            notice.notice_type === "presenter_alert" || notice.notice_type === "minimum_price_interest" || notice.notice_type === "ate_escalation"
           );
           setPresenterNotice(latestPresenterNotice?.message ?? null);
         }
@@ -831,16 +832,27 @@ export default function LiveShopping() {
     setIsChatLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `You are a helpful product expert for a live shopping stream. The current item is a Vintage Leather Jacket (Item #001), 100% full-grain cowhide leather, starting at $50. Answer the following user question concisely and enthusiastically: ${userMessage.text}`,
-      });
+      const ateMatch = findAteQuickAnswer(userMessage.text, { minScore: 2 });
+      const isEscalation = !ateMatch;
+
+      if (isEscalation && guest) {
+        const escalationMessage = `${guest.name} needs live help via ATE escalation: "${userMessage.text.slice(0, 140)}${userMessage.text.length > 140 ? "..." : ""}"`;
+        void createAuctionNotice({
+          notice_type: "ate_escalation",
+          message: escalationMessage,
+          metadata: {
+            source: "ate",
+            question: userMessage.text,
+          },
+          created_by_guest_id: guest.id,
+        });
+        setPresenterNotice(escalationMessage);
+      }
       
       const agentMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'agent',
-        text: response.text || "I'm sorry, I couldn't process that right now."
+        text: ateMatch?.answer ?? ATE_NO_MATCH_RESPONSE,
       };
       
       const newMessages = [...prevMessages, agentMessage];
@@ -856,7 +868,7 @@ export default function LiveShopping() {
       setChatMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'agent',
-        text: "I'm having trouble connecting right now. Please try again later!"
+        text: ATE_NO_MATCH_RESPONSE,
       }]);
     } finally {
       setIsChatLoading(false);
@@ -1585,8 +1597,12 @@ export default function LiveShopping() {
   };
 
   const presenterNotices = auctionNotices.filter((notice) =>
-    notice.notice_type === "presenter_alert" || notice.notice_type === "minimum_price_interest"
+    notice.notice_type === "presenter_alert" || notice.notice_type === "minimum_price_interest" || notice.notice_type === "ate_escalation"
   );
+
+  const pendingAteEscalationCount = presenterNotices.filter(
+    (notice) => notice.notice_type === "ate_escalation" && !notice.reviewed_at
+  ).length;
 
   const filteredPresenterNotices = presenterNotices.filter((notice) => {
     if (noticeFilter === "pending") {
@@ -1646,6 +1662,22 @@ export default function LiveShopping() {
       role: 'agent',
       text: message,
     }]);
+  };
+
+  const handleRaiseHandFromAte = () => {
+    if (isHandRaised) {
+      return;
+    }
+
+    setIsHandRaised(true);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        role: "agent",
+        text: "Your hand is raised. The host will assist you live shortly.",
+      },
+    ]);
   };
 
   const handleRofrAccept = () => {
@@ -2343,6 +2375,11 @@ export default function LiveShopping() {
                   >
                     <MessageSquare className="h-4 w-4" />
                     Product Q&A
+                    {isBroadcasting && pendingAteEscalationCount > 0 && (
+                      <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-zinc-950">
+                        {pendingAteEscalationCount}
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -2535,6 +2572,16 @@ export default function LiveShopping() {
                               </div>
                             )}
                             <p className="text-sm leading-relaxed">{msg.text}</p>
+                            {msg.role === 'agent' && msg.text === ATE_NO_MATCH_RESPONSE && guest && !isHandRaised && (
+                              <button
+                                type="button"
+                                onClick={handleRaiseHandFromAte}
+                                className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#20B2AA]/50 bg-[#20B2AA]/15 px-3 py-1.5 text-xs font-semibold text-[#20B2AA] transition-colors hover:bg-[#20B2AA]/25"
+                              >
+                                <Hand className="h-3 w-3" />
+                                Raise Hand now
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

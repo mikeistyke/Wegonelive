@@ -12,6 +12,113 @@ View your app in AI Studio: https://ai.studio/apps/749c233c-ff26-4e21-a652-ea417
 
 For approved, user-visible behavior changes, update the relevant README section and include a `Last validated: YYYY-MM-DD` line.
 
+## P System Thinking (Priority Method)
+
+Use this priority system for all development, debugging, and roadmap execution.
+
+Priority levels:
+- **P0 — Must-fix before first live test**
+   - Issues that block core user/client value, trust, or revenue.
+   - Examples: live-room access failures, token/auth breakage, bidding/checkout failures, data-loss risks, critical security issues.
+- **P1 — High-impact next**
+   - Important reliability and UX improvements that materially improve customer outcomes, but do not block first live test.
+   - Examples: stronger error visibility, analytics/report confidence, import quality UX, host workflow smoothing.
+- **P2 — Nice-to-have later**
+   - Polish, enhancements, and lower-risk improvements that should not delay P0/P1 delivery.
+   - Examples: visual refinements, optional convenience features, secondary optimizations.
+
+Execution rules:
+1. Always resolve P0 first.
+2. If a task is non-blocking, defer it instead of stalling delivery.
+3. Report progress in order: P0 -> P1 -> P2.
+4. Explicitly label each discovered issue with P-level during debugging.
+5. Before a live test, confirm no unresolved P0 items remain.
+
+## New Concept Triage (Fast Priority Intake)
+
+When a new concept is introduced, classify it in under 2 minutes before implementation.
+
+Step 1 — Score impact (yes/no):
+- Does it prevent revenue flow, bidding continuity, or checkout completion?
+- Does it reduce trust risk (security, access control, data integrity)?
+- Is it required before the next live test?
+
+Step 2 — Assign priority:
+- If any Step 1 answer is "yes" -> **P0** (do now)
+- If no blockers but high customer impact -> **P1** (do next)
+- If useful but non-blocking polish -> **P2** (defer)
+
+Step 3 — Timebox:
+- P0 concept spike: 30-90 minutes max before deciding implementation path
+- P1 concept spike: 30-60 minutes max, schedule after open P0 items
+- P2 concept spike: capture note only, no build work during P0/P1 windows
+
+Step 4 — Decision format (always log this):
+- **Concept:**
+- **Priority:** P0 | P1 | P2
+- **Why now:** one sentence
+- **Scope now:** smallest useful version
+- **Defer:** what is intentionally not included
+
+Default rule:
+- If uncertain between P1 and P2, choose P2 until a concrete blocker appears.
+
+Status communication format:
+- **P0 Now**: blockers/fixes in progress
+- **P1 Next**: high-impact follow-ups
+- **P2 Later**: deferred nice-to-haves
+
+This project uses P System Thinking by default.
+
+## HammerFlow Loop (Draft Shell)
+
+Use this as the operating shell for auction development and validation. We will sketch deeper SOP details later.
+
+Pre-Auction:
+- Research eBay sold comps.
+- Set reserve prices.
+- Upload items to Supabase via CSV.
+- Test Agora stream.
+- Confirm auction date/time.
+- Confirm bidder registration page works.
+
+Live Auction:
+- Verify real-time bids appear without refresh.
+- Confirm eBay Guard logic triggers correctly below reserve.
+- Confirm presenter controls work (`start lot`, `stop lot`, `override reserve`).
+
+Post-Auction:
+- Mark items sold/unsold.
+- Ensure right-of-first-refusal flow works.
+- Confirm winners get invoices.
+- Verify analytics/KPIs update after an auction.
+
+Last validated: `2026-03-02`
+
+## Ask The Expert Q&A (ATE) — Draft Model
+
+`ATE` is the shorttype for **Ask The Expert Q&A** in the Live Shopping experience.
+
+Current model shell:
+- Typed model and seeded Q&A set: `src/lib/ateQaModel.ts`
+- Includes `24` anticipated **customer-facing** questions with canned shallow responses across:
+   - `pre-auction`
+   - `live-auction`
+   - `post-auction`
+- Focuses on bidder/viewer intent (join flow, bidding, stream issues, winners, invoices, shipping, returns, support).
+- Includes `findAteQuickAnswer(query)` helper for canned-response matching.
+
+Current `/lsp` behavior:
+- ATE is first-pass for customer Q&A.
+- If no confident match is found, return a canned escalation message instructing viewer to use **Raise Hand** for live host support.
+- Unmatched ATE questions are logged as presenter notices (`ate_escalation`) and surfaced to hosts with a pending-count badge on the `Product Q&A` tab while broadcasting.
+
+Security and privacy guardrail:
+- ATE content must remain customer-safe and public-safe.
+- Do **not** include internal corporate procedures, non-public policy logic, credentials, pricing formulas, or other in-house-only details in canned responses.
+
+Last validated: `2026-03-02`
+
 ## Security Quick Check (Before GitHub Push)
 
 Use this quick routine before every push or web upload:
