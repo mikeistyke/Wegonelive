@@ -47,6 +47,14 @@ export default function App() {
                 </LiveShoppingAccessRoute>
               }
             />
+            <Route
+              path="/lsp"
+              element={
+                <LiveShoppingAccessRoute>
+                  <LiveShopping />
+                </LiveShoppingAccessRoute>
+              }
+            />
             <Route path="/about" element={<About />} />
             <Route
               path="/ebay-price-guard"

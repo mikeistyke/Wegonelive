@@ -14,7 +14,45 @@ type PublicMetadata = {
   plan?: string;
 };
 
+const parseBypassCsv = (value: string) =>
+  value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+function useOwnerBypassAccess() {
+  const { isLoaded, user } = useUser();
+  const registeredGuest = getRegisteredGuest();
+
+  const bypassEmails = Array.from(
+    new Set(
+      [
+        ...parseBypassCsv(String(import.meta.env.VITE_LSP_BYPASS_EMAILS ?? "")),
+        ...parseBypassCsv(String(import.meta.env.VITE_LSP_BYPASS_ACCESS_EMAILS ?? "")),
+      ].map((value) => value.toLowerCase()),
+    ),
+  );
+
+  const bypassUserIds = Array.from(new Set(parseBypassCsv(String(import.meta.env.VITE_LSP_BYPASS_USER_IDS ?? ""))));
+
+  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
+  const clerkUserId = user?.id ?? "";
+  const isBypassClerkUser =
+    (isLoaded && (bypassUserIds.includes(clerkUserId) || bypassEmails.includes(clerkEmail))) || false;
+
+  const isBypassRegisteredGuest =
+    Boolean(registeredGuest?.email) && bypassEmails.includes(String(registeredGuest?.email ?? "").toLowerCase());
+
+  return isBypassClerkUser || isBypassRegisteredGuest;
+}
+
 export function ProtectedRoute({ children }: GuardProps) {
+  const ownerBypass = useOwnerBypassAccess();
+
+  if (ownerBypass) {
+    return <>{children}</>;
+  }
+
   return (
     <>
       <SignedIn>{children}</SignedIn>
@@ -26,7 +64,12 @@ export function ProtectedRoute({ children }: GuardProps) {
 }
 
 export function AdminRoute({ children }: GuardProps) {
+  const ownerBypass = useOwnerBypassAccess();
   const { isLoaded, user } = useUser();
+
+  if (ownerBypass) {
+    return <>{children}</>;
+  }
 
   if (!isLoaded) {
     return null;
@@ -43,7 +86,12 @@ export function AdminRoute({ children }: GuardProps) {
 }
 
 export function PaidRoute({ children }: GuardProps) {
+  const ownerBypass = useOwnerBypassAccess();
   const { isLoaded, user } = useUser();
+
+  if (ownerBypass) {
+    return <>{children}</>;
+  }
 
   if (!isLoaded) {
     return null;
@@ -61,7 +109,12 @@ export function PaidRoute({ children }: GuardProps) {
 }
 
 export function PrivateMetricsRoute({ children }: GuardProps) {
+  const ownerBypass = useOwnerBypassAccess();
   const { isLoaded, user } = useUser();
+
+  if (ownerBypass) {
+    return <>{children}</>;
+  }
 
   if (!isLoaded) {
     return null;
@@ -92,6 +145,7 @@ export function PrivateMetricsRoute({ children }: GuardProps) {
 }
 
 export function LiveShoppingAccessRoute({ children }: GuardProps) {
+  const ownerBypass = useOwnerBypassAccess();
   const location = useLocation();
   const registeredGuest = getRegisteredGuest();
   const [isWindowOpen, setIsWindowOpen] = useState<boolean | null>(null);
@@ -119,6 +173,10 @@ export function LiveShoppingAccessRoute({ children }: GuardProps) {
       isMounted = false;
     };
   }, []);
+
+  if (ownerBypass) {
+    return <>{children}</>;
+  }
 
   if (!registeredGuest) {
     return <Navigate to="/grtw?reason=register" replace state={{ from: location.pathname }} />;

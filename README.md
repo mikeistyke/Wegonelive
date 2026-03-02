@@ -214,6 +214,14 @@ Live entry control flow:
 - If either check fails, users are redirected to `/grtw`.
 - During the early-access `Soon` period, users can enter `/live`, click sponsor ads, and use AI chat before the event starts.
 
+Owner/admin bypass (for pre-event access):
+- Add one or both in [.env.local](.env.local):
+   - `VITE_LSP_BYPASS_EMAILS=you@example.com`
+   - `VITE_LSP_BYPASS_USER_IDS=user_abc123`
+- Also accepted (legacy alias): `VITE_LSP_BYPASS_ACCESS_EMAILS=you@example.com`
+- Users on this allow-list can access `/live` before the event window for host testing and setup.
+- Allow-list bypass is identity-based (Clerk account email/userId or registered guest email) and does not open access for all users.
+
 ## Shop Date Scheduling
 
 Published shopping dates now drive site-wide promotion timing and `/live` access gating.

@@ -63,6 +63,23 @@ export default function GetReadyToWin() {
     ? msUntilWindowOpen <= 0
     : Boolean(windowStatus?.is_window_open);
 
+  const parseBypassCsv = (value: string) =>
+    value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  const bypassEmails = Array.from(
+    new Set(
+      [
+        ...parseBypassCsv(String(import.meta.env.VITE_LSP_BYPASS_EMAILS ?? "")),
+        ...parseBypassCsv(String(import.meta.env.VITE_LSP_BYPASS_ACCESS_EMAILS ?? "")),
+      ].map((value) => value.toLowerCase()),
+    ),
+  );
+  const isBypassGuest = Boolean(guest?.email) && bypassEmails.includes(String(guest?.email ?? "").toLowerCase());
+  const canEnterLive = isBypassGuest || (isWindowOpen && Boolean(guest));
+
   useEffect(() => {
     const syncWindowStatus = async (force = false) => {
       const nextStatus = await fetchLiveWindowStatus(force);
@@ -174,15 +191,15 @@ export default function GetReadyToWin() {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                to={isWindowOpen && guest ? "/live" : "/grtw"}
+                to={canEnterLive ? "/live" : "/grtw"}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-3 font-semibold transition-colors ${
-                  isWindowOpen && guest
+                  canEnterLive
                     ? "bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
                     : "cursor-not-allowed border border-zinc-700 bg-zinc-800 text-zinc-400"
                 }`}
-                aria-disabled={!isWindowOpen || !guest}
+                aria-disabled={!canEnterLive}
                 onClick={(event) => {
-                  if (!isWindowOpen || !guest) {
+                  if (!canEnterLive) {
                     event.preventDefault();
                   }
                 }}
