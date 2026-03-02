@@ -1,6 +1,6 @@
 # WeGoneLive Roadmap (GUI-First)
 
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 ## Baseline Status
 - TypeScript check: pass (`npm.cmd run lint`)
@@ -13,26 +13,26 @@ Goal: Ensure primary user journeys work end-to-end without blockers.
 1. Registration and live-entry gate
    - Validate `/grtw` -> `/live` flow for registered and unregistered users.
    - Confirm redirect behavior when access window is closed.
-2. Shop Date admin workflow
+2. ✅ Shop Date admin workflow (completed)
    - Verify create, update, and activate/deactivate in `/insights/shop-date-input`.
    - Confirm public `/shop-date` reflects active event.
-3. Lot Decoder live sync
+3. ✅ Lot Decoder live sync (completed)
    - Validate active session selection and auto-sync from `/live` sale close event.
    - Confirm recent sale indicator updates reliably.
 
 Exit criteria:
-- No broken navigation in these flows.
-- No console errors in happy path.
-- README behavior descriptions still accurate.
+- ✅ No broken navigation in these flows.
+- ✅ No console errors in happy path.
+- ✅ README behavior descriptions still accurate.
 
 ## Phase 2 — Live Reliability and Safety
 Goal: Make live experience resilient under normal issues.
 
-1. Agora token and host authorization checks
+1. ✅ Agora token and host authorization checks (completed)
    - Verify publisher token restrictions and audience token behavior.
-2. Viewer state handling
+2. ✅ Viewer state handling (completed)
    - Confirm pre-live `Soon` state, transition to `LIVE`, and pause/play consistency.
-3. Error visibility
+3. ✅ Error visibility (completed)
    - Add/verify clear UI feedback for token or network failures where missing.
 
 Exit criteria:
@@ -42,16 +42,16 @@ Exit criteria:
 ## Phase 3 — Data and Reporting Confidence
 Goal: Ensure records and metrics are trustworthy.
 
-1. Supabase/SQLite fallback parity
+1. ✅ Supabase/SQLite fallback parity (completed)
    - Validate expected behavior with and without Supabase env vars.
-2. Ad reports and analytics sanity checks
+2. ✅ Ad reports and analytics sanity checks (completed)
    - Verify report routes and key metrics display with realistic data.
-3. Lot/session import quality checks
+3. ✅ Lot/session import quality checks (completed)
    - Validate CSV header mismatch and bad-row handling UX.
 
 Exit criteria:
-- Core write/read paths produce expected records.
-- Metrics remain consistent after refresh and route changes.
+- ✅ Core write/read paths produce expected records.
+- ✅ Metrics remain consistent after refresh and route changes.
 
 ## Phase 4 — Regression Safety Net
 Goal: Reduce breakage when shipping updates.
@@ -104,5 +104,5 @@ Exit criteria:
 6. Verify on GitHub and run manual smoke checklist.
 
 ## Next Task (Start Here)
-- Execute Phase 1, item 1:
-  Validate the registration and live-entry gate behavior and list any mismatches between actual behavior and README.
+- Execute Phase 4, item 1:
+   Run lightweight smoke checks (Home -> GRTW -> Live, Shop Date admin -> public schedule, Lot Decoder import -> live sale sync).

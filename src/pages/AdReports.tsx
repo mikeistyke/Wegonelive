@@ -1,28 +1,112 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { BarChart3, TrendingUp, Users, Clock, DollarSign, MousePointerClick, Eye, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
+import { BarChart3, TrendingUp, Clock, DollarSign, MousePointerClick, Eye, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
 
-// Mock data for the dashboard
-const MOCK_STATS = {
-  totalRevenue: 4250.00,
-  revenueGrowth: 12.5,
-  totalImpressions: 124500,
-  impressionsGrowth: 8.2,
-  totalClicks: 3240,
-  clicksGrowth: -2.4,
-  avgTimeOnAd: "12s",
-  timeGrowth: 5.1,
+type TimeRange = "24h" | "7d" | "30d" | "All";
+
+type AdSummary = {
+  total_revenue: number;
+  revenue_growth: number;
+  total_impressions: number;
+  impressions_growth: number;
+  total_clicks: number;
+  clicks_growth: number;
+  avg_time_on_ad_ms: number;
+  avg_time_growth: number;
 };
 
-const MOCK_CAMPAIGNS = [
-  { id: 1, name: "Summer Leather Collection", sponsor: "Amazon Fashion", impressions: 45000, clicks: 1200, ctr: "2.6%", revenue: 1500.00, status: "Active" },
-  { id: 2, name: "Vintage Sunglasses Promo", sponsor: "Ray-Ban", impressions: 32000, clicks: 850, ctr: "2.6%", revenue: 950.00, status: "Active" },
-  { id: 3, name: "Luxury Watches Spotlight", sponsor: "Rolex", impressions: 28000, clicks: 920, ctr: "3.2%", revenue: 1200.00, status: "Completed" },
-  { id: 4, name: "Premium Denim Feature", sponsor: "Levi's", impressions: 19500, clicks: 270, ctr: "1.3%", revenue: 600.00, status: "Active" },
-];
+type AdCampaign = {
+  ad_id: string;
+  campaign_name: string;
+  sponsor: string;
+  impressions: number;
+  clicks: number;
+  ctr_percentage: number;
+  revenue: number;
+};
+
+const defaultSummary: AdSummary = {
+  total_revenue: 0,
+  revenue_growth: 0,
+  total_impressions: 0,
+  impressions_growth: 0,
+  total_clicks: 0,
+  clicks_growth: 0,
+  avg_time_on_ad_ms: 0,
+  avg_time_growth: 0,
+};
+
+function formatDuration(ms: number) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return "0s";
+  }
+
+  return `${Math.round(ms / 1000)}s`;
+}
 
 export default function AdReports() {
-  const [timeRange, setTimeRange] = useState("7d");
+  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
+  const [summary, setSummary] = useState<AdSummary>(defaultSummary);
+  const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const range = encodeURIComponent(timeRange);
+        const [summaryRes, campaignsRes] = await Promise.all([
+          fetch(`/api/analytics/ad/summary?range=${range}`),
+          fetch(`/api/analytics/ad/campaigns?range=${range}`),
+        ]);
+
+        if (!summaryRes.ok || !campaignsRes.ok) {
+          throw new Error("Failed to load ad analytics data");
+        }
+
+        const summaryData = await summaryRes.json() as Partial<AdSummary>;
+        const campaignsData = await campaignsRes.json() as AdCampaign[];
+
+        if (cancelled) {
+          return;
+        }
+
+        setSummary({
+          total_revenue: Number(summaryData.total_revenue ?? 0),
+          revenue_growth: Number(summaryData.revenue_growth ?? 0),
+          total_impressions: Number(summaryData.total_impressions ?? 0),
+          impressions_growth: Number(summaryData.impressions_growth ?? 0),
+          total_clicks: Number(summaryData.total_clicks ?? 0),
+          clicks_growth: Number(summaryData.clicks_growth ?? 0),
+          avg_time_on_ad_ms: Number(summaryData.avg_time_on_ad_ms ?? 0),
+          avg_time_growth: Number(summaryData.avg_time_growth ?? 0),
+        });
+        setCampaigns(Array.isArray(campaignsData) ? campaignsData : []);
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : "Failed to load ad analytics";
+          setError(message);
+          setSummary(defaultSummary);
+          setCampaigns([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [timeRange]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans pb-12">
@@ -41,7 +125,7 @@ export default function AdReports() {
               {["24h", "7d", "30d", "All"].map((range) => (
                 <button
                   key={range}
-                  onClick={() => setTimeRange(range)}
+                  onClick={() => setTimeRange(range as TimeRange)}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
                     timeRange === range
                       ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/50"
@@ -61,33 +145,37 @@ export default function AdReports() {
       </div>
 
       <div className="container mx-auto px-6 mt-8">
+        {error ? (
+          <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</p>
+        ) : null}
+
         {/* Top Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard 
             title="Total Ad Revenue" 
-            value={`$${MOCK_STATS.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-            growth={MOCK_STATS.revenueGrowth}
+            value={`$${summary.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            growth={summary.revenue_growth}
             icon={<DollarSign className="h-5 w-5 text-emerald-600" />}
             color="emerald"
           />
           <StatCard 
             title="Total Impressions" 
-            value={MOCK_STATS.totalImpressions.toLocaleString()}
-            growth={MOCK_STATS.impressionsGrowth}
+            value={summary.total_impressions.toLocaleString()}
+            growth={summary.impressions_growth}
             icon={<Eye className="h-5 w-5 text-blue-600" />}
             color="blue"
           />
           <StatCard 
             title="Total Clicks" 
-            value={MOCK_STATS.totalClicks.toLocaleString()}
-            growth={MOCK_STATS.clicksGrowth}
+            value={summary.total_clicks.toLocaleString()}
+            growth={summary.clicks_growth}
             icon={<MousePointerClick className="h-5 w-5 text-violet-600" />}
             color="violet"
           />
           <StatCard 
             title="Avg. Time on Ad" 
-            value={MOCK_STATS.avgTimeOnAd}
-            growth={MOCK_STATS.timeGrowth}
+            value={formatDuration(summary.avg_time_on_ad_ms)}
+            growth={summary.avg_time_growth}
             icon={<Clock className="h-5 w-5 text-amber-600" />}
             color="amber"
           />
@@ -114,26 +202,33 @@ export default function AdReports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {MOCK_CAMPAIGNS.map((campaign) => (
-                    <tr key={campaign.id} className="hover:bg-zinc-50/80 transition-colors">
+                  {campaigns.map((campaign) => (
+                    <tr key={campaign.ad_id} className="hover:bg-zinc-50/80 transition-colors">
                       <td className="p-4 pl-6">
-                        <div className="font-medium text-zinc-900">{campaign.name}</div>
+                        <div className="font-medium text-zinc-900">{campaign.campaign_name}</div>
                         <div className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
-                          <span className={`inline-block w-2 h-2 rounded-full ${campaign.status === 'Active' ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
-                          {campaign.status}
+                          <span className={`inline-block w-2 h-2 rounded-full ${campaign.impressions > 0 ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
+                          {campaign.impressions > 0 ? 'Active' : 'Idle'}
                         </div>
                       </td>
                       <td className="p-4 text-sm text-zinc-600">{campaign.sponsor}</td>
                       <td className="p-4 text-right text-sm font-medium text-zinc-700">{campaign.impressions.toLocaleString()}</td>
                       <td className="p-4 text-right">
                         <div className="text-sm font-medium text-zinc-700">{campaign.clicks.toLocaleString()}</div>
-                        <div className="text-xs text-zinc-500">{campaign.ctr}</div>
+                        <div className="text-xs text-zinc-500">{campaign.ctr_percentage.toFixed(1)}%</div>
                       </td>
                       <td className="p-4 text-right pr-6 font-medium text-emerald-600">
                         ${campaign.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
+                  {!loading && campaigns.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-sm text-zinc-500">
+                        No tracked ad events yet. Open `/live` and interact with ads to generate analytics.
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>

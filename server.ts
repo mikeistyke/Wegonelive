@@ -356,6 +356,18 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS ad_analytics_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ad_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    campaign_name TEXT,
+    sponsor TEXT,
+    value REAL,
+    duration_ms INTEGER,
+    metadata TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 try {
@@ -476,9 +488,178 @@ async function startServer() {
 
   app.use(express.json());
 
+  const adAnalyticsEvents = new Set(["impression", "click", "time_on_ad", "conversion"]);
+
+  const getAnalyticsWindow = (rangeRaw: unknown) => {
+    const range = String(rangeRaw ?? "7d").trim().toLowerCase();
+
+    if (range === "all") {
+      return {
+        range: "all",
+        currentWhere: "",
+        currentParams: [] as any[],
+        previousWhere: "",
+        previousParams: [] as any[],
+      };
+    }
+
+    const periodMs = range === "24h"
+      ? 24 * 60 * 60 * 1000
+      : range === "30d"
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+
+    const now = Date.now();
+    const currentStartIso = new Date(now - periodMs).toISOString();
+    const previousStartIso = new Date(now - periodMs * 2).toISOString();
+    const previousEndIso = currentStartIso;
+
+    return {
+      range,
+      currentWhere: "WHERE created_at >= ?",
+      currentParams: [currentStartIso],
+      previousWhere: "WHERE created_at >= ? AND created_at < ?",
+      previousParams: [previousStartIso, previousEndIso],
+    };
+  };
+
+  const toGrowthPercentage = (current: number, previous: number) => {
+    if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+      return 0;
+    }
+
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
+    }
+
+    return Number((((current - previous) / Math.abs(previous)) * 100).toFixed(1));
+  };
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/analytics/ad", (req, res) => {
+    const eventType = String(req.body?.eventType ?? "").trim().toLowerCase();
+    const adId = String(req.body?.adId ?? "").trim();
+    const campaignName = String(req.body?.campaignName ?? req.body?.title ?? "").trim();
+    const sponsor = String(req.body?.sponsor ?? "").trim();
+    const rawValue = req.body?.value;
+    const rawDuration = req.body?.durationMs;
+    const metadata = req.body?.metadata;
+
+    if (!adAnalyticsEvents.has(eventType)) {
+      return res.status(400).json({ error: "Invalid eventType" });
+    }
+
+    if (!adId) {
+      return res.status(400).json({ error: "adId is required" });
+    }
+
+    const value = Number(rawValue);
+    const durationMs = Number(rawDuration);
+    const normalizedValue = Number.isFinite(value) ? value : null;
+    const normalizedDuration = Number.isFinite(durationMs) && durationMs >= 0
+      ? Math.floor(durationMs)
+      : null;
+
+    db.prepare(`
+      INSERT INTO ad_analytics_events (ad_id, event_type, campaign_name, sponsor, value, duration_ms, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      adId,
+      eventType,
+      campaignName || null,
+      sponsor || null,
+      normalizedValue,
+      normalizedDuration,
+      metadata ? JSON.stringify(metadata) : null,
+    );
+
+    return res.status(201).json({ ok: true });
+  });
+
+  app.get("/api/analytics/ad/summary", (req, res) => {
+    const window = getAnalyticsWindow(req.query.range);
+
+    const currentRow = db.prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN COALESCE(value, 0) ELSE 0 END), 0) AS total_revenue,
+        COALESCE(SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END), 0) AS total_impressions,
+        COALESCE(SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END), 0) AS total_clicks,
+        AVG(CASE WHEN event_type = 'time_on_ad' AND duration_ms >= 0 THEN duration_ms END) AS avg_time_on_ad_ms
+      FROM ad_analytics_events
+      ${window.currentWhere}
+    `).get(...window.currentParams) as any;
+
+    const previousRow = db.prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN COALESCE(value, 0) ELSE 0 END), 0) AS total_revenue,
+        COALESCE(SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END), 0) AS total_impressions,
+        COALESCE(SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END), 0) AS total_clicks,
+        AVG(CASE WHEN event_type = 'time_on_ad' AND duration_ms >= 0 THEN duration_ms END) AS avg_time_on_ad_ms
+      FROM ad_analytics_events
+      ${window.previousWhere}
+    `).get(...window.previousParams) as any;
+
+    const totalRevenue = Number(currentRow?.total_revenue ?? 0);
+    const totalImpressions = Number(currentRow?.total_impressions ?? 0);
+    const totalClicks = Number(currentRow?.total_clicks ?? 0);
+    const avgTimeOnAdMs = Number(currentRow?.avg_time_on_ad_ms ?? 0);
+
+    const previousRevenue = Number(previousRow?.total_revenue ?? 0);
+    const previousImpressions = Number(previousRow?.total_impressions ?? 0);
+    const previousClicks = Number(previousRow?.total_clicks ?? 0);
+    const previousAvgTime = Number(previousRow?.avg_time_on_ad_ms ?? 0);
+
+    return res.json({
+      range: window.range,
+      total_revenue: totalRevenue,
+      revenue_growth: toGrowthPercentage(totalRevenue, previousRevenue),
+      total_impressions: totalImpressions,
+      impressions_growth: toGrowthPercentage(totalImpressions, previousImpressions),
+      total_clicks: totalClicks,
+      clicks_growth: toGrowthPercentage(totalClicks, previousClicks),
+      avg_time_on_ad_ms: avgTimeOnAdMs,
+      avg_time_growth: toGrowthPercentage(avgTimeOnAdMs, previousAvgTime),
+    });
+  });
+
+  app.get("/api/analytics/ad/campaigns", (req, res) => {
+    const window = getAnalyticsWindow(req.query.range);
+
+    const rows = db.prepare(`
+      SELECT
+        ad_id,
+        COALESCE(campaign_name, 'Untitled Campaign') AS campaign_name,
+        COALESCE(sponsor, 'Unknown Sponsor') AS sponsor,
+        COALESCE(SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END), 0) AS impressions,
+        COALESCE(SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END), 0) AS clicks,
+        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN COALESCE(value, 0) ELSE 0 END), 0) AS revenue
+      FROM ad_analytics_events
+      ${window.currentWhere}
+      GROUP BY ad_id, campaign_name, sponsor
+      ORDER BY impressions DESC, clicks DESC
+      LIMIT 50
+    `).all(...window.currentParams) as any[];
+
+    return res.json(rows.map((row) => {
+      const impressions = Number(row.impressions ?? 0);
+      const clicks = Number(row.clicks ?? 0);
+      const revenue = Number(row.revenue ?? 0);
+      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+
+      return {
+        ad_id: String(row.ad_id ?? ""),
+        campaign_name: String(row.campaign_name ?? "Untitled Campaign"),
+        sponsor: String(row.sponsor ?? "Unknown Sponsor"),
+        impressions,
+        clicks,
+        ctr_percentage: Number(ctr.toFixed(1)),
+        revenue,
+      };
+    }));
   });
 
   app.post("/api/agora/token", async (req, res) => {
@@ -1563,30 +1744,71 @@ Provide valid JSON only in this exact format:
       return res.status(400).json({ error: "Session id is required" });
     }
 
-    const items = (inputItems as LotDecoderImportItem[])
-      .map((item) => {
-        const title = String(item?.title ?? "").trim();
-        const expected = Number(item?.expected ?? 0);
-        const quantityExpectedRaw = Number(item?.quantity_expected ?? 1);
-        const quantityExpected = Number.isFinite(quantityExpectedRaw) && quantityExpectedRaw > 0
-          ? Math.floor(quantityExpectedRaw)
-          : 1;
+    const rowResults = (inputItems as LotDecoderImportItem[]).map((item, index) => {
+      const title = String(item?.title ?? "").trim();
+      const expected = Number(item?.expected ?? 0);
+      const quantityExpectedRaw = Number(item?.quantity_expected ?? 1);
+      const quantityExpected = Number.isFinite(quantityExpectedRaw) && quantityExpectedRaw > 0
+        ? Math.floor(quantityExpectedRaw)
+        : 1;
+      const ebayGuard = Number(item?.ebay_guard ?? 0);
+      const row = index + 2;
 
+      if (!title) {
         return {
+          isValid: false,
+          warning: {
+            row,
+            title: "(missing title)",
+            message: "Row skipped because title is missing.",
+          } as LotDecoderImportWarning,
+        };
+      }
+
+      if (!Number.isFinite(expected) || expected < 0) {
+        return {
+          isValid: false,
+          warning: {
+            row,
+            title,
+            message: "Row skipped because expected must be a non-negative number.",
+          } as LotDecoderImportWarning,
+        };
+      }
+
+      if (!Number.isFinite(ebayGuard)) {
+        return {
+          isValid: false,
+          warning: {
+            row,
+            title,
+            message: "Row skipped because ebay_guard must be numeric when provided.",
+          } as LotDecoderImportWarning,
+        };
+      }
+
+      return {
+        isValid: true,
+        row,
+        item: {
           sku: String(item?.sku ?? "").trim() || null,
           title,
           expected,
           quantity_expected: quantityExpected,
-          ebay_guard: Number(item?.ebay_guard ?? 0),
-        };
-      })
-      .filter((item) => item.title && Number.isFinite(item.expected) && item.expected >= 0 && Number.isFinite(item.ebay_guard));
+          ebay_guard: ebayGuard,
+        },
+      };
+    });
 
-    if (items.length === 0) {
-      return res.status(400).json({ error: "At least one valid item is required" });
-    }
+    const items = rowResults
+      .filter((row): row is { isValid: true; row: number; item: { sku: string | null; title: string; expected: number; quantity_expected: number; ebay_guard: number } } => row.isValid)
+      .map((row) => row.item);
 
-    const warnings: LotDecoderImportWarning[] = items.flatMap((item, index) => {
+    const warnings: LotDecoderImportWarning[] = rowResults
+      .filter((row): row is { isValid: false; warning: LotDecoderImportWarning } => !row.isValid)
+      .map((row) => row.warning);
+
+    warnings.push(...items.flatMap((item, index) => {
       if (item.ebay_guard > 0 && item.ebay_guard < item.expected * 0.75) {
         return [{
           row: index + 2,
@@ -1596,7 +1818,11 @@ Provide valid JSON only in this exact format:
       }
 
       return [];
-    });
+    }));
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: "At least one valid item is required", warnings });
+    }
 
     const useSupabaseForLotDecoder = await canUseSupabaseForLotDecoder().catch((err: any) => {
       res.status(500).json({ error: err?.message || "Failed to resolve lot decoder storage mode" });

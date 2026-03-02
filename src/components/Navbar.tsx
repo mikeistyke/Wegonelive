@@ -24,7 +24,7 @@ export function Navbar() {
           </Link>
           <div className="flex items-center gap-6 text-sm font-medium text-white/80">
             <Link to="/" className="hover:text-emerald-400 transition-colors">Home</Link>
-            <Link to="/grtw" className="flex items-center gap-1 hover:text-emerald-400 transition-colors">
+            <Link to="/lsp" className="flex items-center gap-1 hover:text-emerald-400 transition-colors">
               <ShoppingBag className="h-4 w-4" />
               Live Shopping
             </Link>

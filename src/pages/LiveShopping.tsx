@@ -148,7 +148,7 @@ export default function LiveShopping() {
   const [auctionNotices, setAuctionNotices] = useState<AuctionNotice[]>([]);
   const [reviewingNoticeId, setReviewingNoticeId] = useState<number | null>(null);
   const [noticeFilter, setNoticeFilter] = useState<"all" | "pending" | "reviewed">("all");
-  const [adContent, setAdContent] = useState<{ id: string, title: string, description: string, cta: string, imageUrl: string } | null>(null);
+  const [adContent, setAdContent] = useState<{ id: string, title: string, description: string, cta: string, imageUrl: string, sponsor?: string } | null>(null);
   const [liveLotSessionName, setLiveLotSessionName] = useState<string>("");
   const [liveLotItems, setLiveLotItems] = useState<LiveLotItem[]>([]);
   const [selectedLiveLotItemId, setSelectedLiveLotItemId] = useState<string>("");
@@ -167,6 +167,7 @@ export default function LiveShopping() {
   const resolutionPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const qualityLabelStabilizeUntilRef = useRef<number>(0);
   const activeRenderedVideoTrackRef = useRef<{ play: (element: HTMLElement) => void; stop: () => void } | null>(null);
+  const activeRenderedAudioTrackRef = useRef<{ play: () => void; stop: () => void } | null>(null);
   
   // Ad tracking refs
   const adViewStartTimeRef = useRef<number | null>(null);
@@ -549,17 +550,28 @@ export default function LiveShopping() {
     }
   };
 
-  // Mock Analytics Tracker
-  const trackAdEvent = (eventType: 'impression' | 'click' | 'time_on_ad' | 'conversion', adId: string, extraData: any = {}) => {
-    console.log(`[Ad Analytics] Event: ${eventType} | Ad ID: ${adId}`, extraData);
-    // In a real app, you would send this to your backend:
-    // fetch('/api/analytics/ad', { method: 'POST', body: JSON.stringify({ eventType, adId, ...extraData }) })
+  const trackAdEvent = async (eventType: 'impression' | 'click' | 'time_on_ad' | 'conversion', adId: string, extraData: any = {}) => {
+    try {
+      await fetch('/api/analytics/ad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType,
+          adId,
+          campaignName: adContent?.title || null,
+          sponsor: adContent?.sponsor || null,
+          ...extraData,
+        }),
+      });
+    } catch (err) {
+      console.warn('Ad analytics tracking failed', err);
+    }
   };
 
   useEffect(() => {
     // When a new ad is displayed
     if (adContent) {
-      trackAdEvent('impression', adContent.id);
+      void trackAdEvent('impression', adContent.id);
       adViewStartTimeRef.current = Date.now();
     }
 
@@ -567,17 +579,17 @@ export default function LiveShopping() {
     return () => {
       if (adContent && adViewStartTimeRef.current) {
         const timeOnAd = Date.now() - adViewStartTimeRef.current;
-        trackAdEvent('time_on_ad', adContent.id, { durationMs: timeOnAd });
+        void trackAdEvent('time_on_ad', adContent.id, { durationMs: timeOnAd });
       }
     };
   }, [adContent]);
 
   const handleAdClick = () => {
     if (adContent) {
-      trackAdEvent('click', adContent.id);
+      void trackAdEvent('click', adContent.id);
       // Simulate conversion after click (for demo purposes)
       setTimeout(() => {
-        trackAdEvent('conversion', adContent.id, { value: 1.50 }); // e.g., $1.50 earned
+        void trackAdEvent('conversion', adContent.id, { value: 1.50 }); // e.g., $1.50 earned
       }, 5000);
       
       // Open the sponsor link (mocked)
@@ -611,6 +623,7 @@ export default function LiveShopping() {
         description?: string;
         cta?: string;
         imageUrl?: string;
+        sponsor?: string;
       };
 
       setAdContent({
@@ -619,6 +632,7 @@ export default function LiveShopping() {
         description: adData.description || fallbackAd.description,
         cta: adData.cta || fallbackAd.cta,
         imageUrl: adData.imageUrl || fallbackAd.imageUrl,
+        sponsor: adData.sponsor,
       });
     } catch (err) {
       console.error("Ad generation error:", err);
@@ -897,9 +911,11 @@ export default function LiveShopping() {
     if (activeRenderedVideoTrack) {
       if (isPlaying) {
         activeRenderedVideoTrack.stop();
+        activeRenderedAudioTrackRef.current?.stop();
         setIsPlaying(false);
       } else {
         activeRenderedVideoTrack.play(videoEl);
+        activeRenderedAudioTrackRef.current?.play();
         setIsPlaying(true);
       }
       return;
@@ -965,6 +981,7 @@ export default function LiveShopping() {
     localVideoTrackRef.current = null;
     localAudioTrackRef.current = null;
     activeRenderedVideoTrackRef.current = null;
+    activeRenderedAudioTrackRef.current = null;
     agoraClientRef.current = null;
     setStream(null);
 
@@ -1084,7 +1101,9 @@ export default function LiveShopping() {
 
   const resetVideoToFallback = () => {
     activeRenderedVideoTrackRef.current?.stop();
+    activeRenderedAudioTrackRef.current?.stop();
     activeRenderedVideoTrackRef.current = null;
+    activeRenderedAudioTrackRef.current = null;
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
@@ -1106,6 +1125,11 @@ export default function LiveShopping() {
     if (!client) {
       return;
     }
+
+    activeRenderedVideoTrackRef.current?.stop();
+    activeRenderedAudioTrackRef.current?.stop();
+    activeRenderedVideoTrackRef.current = null;
+    activeRenderedAudioTrackRef.current = null;
 
     try {
       client.removeAllListeners();
@@ -1173,13 +1197,19 @@ export default function LiveShopping() {
         }
 
         if (mediaType === "audio") {
-          user.audioTrack?.play();
+          if (user.audioTrack) {
+            activeRenderedAudioTrackRef.current = user.audioTrack;
+            if (isPlaying) {
+              user.audioTrack.play();
+            }
+          }
         }
       });
 
       client.on("user-unpublished", (user, mediaType) => {
         if (mediaType === "audio") {
           user.audioTrack?.stop();
+          activeRenderedAudioTrackRef.current = null;
         }
 
         if (mediaType === "video") {

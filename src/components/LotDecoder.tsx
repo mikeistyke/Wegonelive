@@ -50,6 +50,12 @@ type CsvImportItem = {
   ebay_guard?: number;
 };
 
+type CsvParseResult = {
+  items: CsvImportItem[];
+  warnings: ImportWarning[];
+  error?: string;
+};
+
 const defaultMetrics: LotMetrics = {
   product_count: 0,
   projected_total: 0,
@@ -99,14 +105,14 @@ function parseCsvLine(line: string) {
   return values;
 }
 
-function parseImportCsv(fileContent: string): CsvImportItem[] {
+function parseImportCsv(fileContent: string): CsvParseResult {
   const lines = fileContent
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   if (lines.length < 2) {
-    return [];
+    return { items: [], warnings: [], error: "CSV must include a header row and at least one data row." };
   }
 
   const headers = parseCsvLine(lines[0]).map((header) => header.toLowerCase());
@@ -118,16 +124,34 @@ function parseImportCsv(fileContent: string): CsvImportItem[] {
   const ebayGuardIndex = headers.findIndex((header) => ["ebay_guard", "ebay_guard_value", "guard", "eventual_guard"].includes(header));
 
   if (titleIndex < 0 || expectedIndex < 0) {
-    return [];
+    return { items: [], warnings: [], error: "CSV must include title and expected columns." };
   }
 
-  return lines.slice(1).flatMap((line) => {
+  const items: CsvImportItem[] = [];
+  const warnings: ImportWarning[] = [];
+
+  lines.slice(1).forEach((line, index) => {
     const cols = parseCsvLine(line);
+    const rowNumber = index + 2;
     const expected = Number(cols[expectedIndex] ?? 0);
     const title = String(cols[titleIndex] ?? "").trim();
 
-    if (!title || !Number.isFinite(expected) || expected < 0) {
-      return [];
+    if (!title) {
+      warnings.push({
+        row: rowNumber,
+        title: "(missing title)",
+        message: "Row skipped because title is missing.",
+      });
+      return;
+    }
+
+    if (!Number.isFinite(expected) || expected < 0) {
+      warnings.push({
+        row: rowNumber,
+        title,
+        message: "Row skipped because expected must be a non-negative number.",
+      });
+      return;
     }
 
     const quantityExpectedRaw = qtyIndex >= 0 ? Number(cols[qtyIndex]) : 1;
@@ -138,14 +162,16 @@ function parseImportCsv(fileContent: string): CsvImportItem[] {
     const ebayGuardRaw = ebayGuardIndex >= 0 ? Number(cols[ebayGuardIndex]) : 0;
     const ebayGuard = Number.isFinite(ebayGuardRaw) && ebayGuardRaw >= 0 ? ebayGuardRaw : 0;
 
-    return [{
+    items.push({
       sku: skuIndex >= 0 ? String(cols[skuIndex] ?? "").trim() : "",
       title,
       expected,
       quantity_expected: quantityExpected,
       ebay_guard: ebayGuard,
-    }];
+    });
   });
+
+  return { items, warnings };
 }
 
 export function LotDecoder() {
@@ -346,8 +372,15 @@ export function LotDecoder() {
     const text = await file.text();
     const parsed = parseImportCsv(text);
 
-    if (parsed.length === 0) {
+    if (parsed.error) {
+      setError(parsed.error);
+      event.target.value = "";
+      return;
+    }
+
+    if (parsed.items.length === 0) {
       setError("CSV must include at least one valid row with title and expected columns.");
+      setImportWarnings(parsed.warnings);
       event.target.value = "";
       return;
     }
@@ -355,11 +388,12 @@ export function LotDecoder() {
     const res = await fetch(`/api/lot-decoder/${activeSessionId}/import`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: parsed }),
+      body: JSON.stringify({ items: parsed.items }),
     });
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      setImportWarnings(data.warnings ?? []);
       setError(data.error ?? "Import failed.");
       event.target.value = "";
       return;
@@ -367,7 +401,7 @@ export function LotDecoder() {
 
     const data = await res.json() as { imported: number; warnings?: ImportWarning[] };
     setNotice(`Imported ${data.imported} item(s).`);
-    setImportWarnings(data.warnings ?? []);
+    setImportWarnings([...(parsed.warnings ?? []), ...(data.warnings ?? [])]);
     await loadSessionData(activeSessionId);
     event.target.value = "";
   };
