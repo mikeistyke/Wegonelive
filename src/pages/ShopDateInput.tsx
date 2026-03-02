@@ -165,7 +165,7 @@ export default function ShopDateInput() {
             <CalendarCheck2 className="h-4 w-4" />
             Shop Date Input
           </p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Manage Shopping Event Dates</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Manage Live Shopping Event Dates</h1>
           <p className="mt-3 max-w-3xl text-zinc-300">
             Enter and update official event date/time values here. The same schedule drives site promotion and `/live` access gating.
           </p>
@@ -175,7 +175,7 @@ export default function ShopDateInput() {
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-6">
             <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
               <CalendarPlus2 className="h-5 w-5 text-emerald-400" />
-              Add New Shop Date
+              Add New Live Shopping Date
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <input
