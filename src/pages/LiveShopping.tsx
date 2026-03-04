@@ -1195,7 +1195,7 @@ export default function LiveShopping() {
 
       const tokenPayload = await requestAgoraToken(session);
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-      client.setClientRole("audience");
+      await client.setClientRole("audience");
 
       client.on("user-published", async (user, mediaType) => {
         await client.subscribe(user, mediaType);
@@ -1315,7 +1315,7 @@ export default function LiveShopping() {
 
         const tokenPayload = await requestAgoraToken(session);
         const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-        client.setClientRole("host");
+        await client.setClientRole("host");
         await client.join(tokenPayload.appId, tokenPayload.channelName, tokenPayload.token, tokenPayload.uid);
         logAgoraClientEvent("host.join.succeeded", {
           uid: tokenPayload.uid,

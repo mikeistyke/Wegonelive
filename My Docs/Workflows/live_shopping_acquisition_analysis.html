@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Shopping: PhD-Level Customer Acquisition Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@400;500&family=Neue+Haas+Grotesk,sans-serif&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f0e8;
+    --accent: #c8390a;
+    --gold: #b8860b;
+    --steel: #2b3a4a;
+    --mist: #e8e2d6;
+    --pale: #faf7f2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 24px 80px;
+  }
+
+  .masthead {
+    border-top: 4px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding: 28px 0 20px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .masthead::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ink);
+  }
+
+  .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #555;
+    letter-spacing: 0.05em;
+    border-left: 3px solid var(--gold);
+    padding-left: 12px;
+    max-width: 680px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 52px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .section-title span {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  /* TABLE BASE */
+  .tbl-wrap {
+    overflow-x: auto;
+    margin-bottom: 48px;
+    border: 1px solid #c9c2b4;
+    border-radius: 2px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--pale);
+  }
+
+  thead tr {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--mist);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover {
+    background: #ede8de;
+  }
+
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  td {
+    padding: 14px 16px;
+    vertical-align: top;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  td:first-child {
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--steel);
+    border-right: 1px solid var(--mist);
+  }
+
+  /* VERDICT PILLS */
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .pill-agree    { background: #d4edda; color: #145523; }
+  .pill-partial  { background: #fff3cd; color: #7a5a00; }
+  .pill-gap      { background: #f8d7da; color: #721c24; }
+  .pill-expand   { background: #d1ecf1; color: #0c5460; }
+
+  /* TIER ROWS */
+  .tier-1 td:first-child { border-left: 4px solid var(--accent); }
+  .tier-2 td:first-child { border-left: 4px solid var(--gold); }
+  .tier-3 td:first-child { border-left: 4px solid var(--steel); }
+
+  /* FRAMEWORK CARDS for table 3 */
+  .fw-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .fw-author {
+    font-size: 10px;
+    color: #777;
+    letter-spacing: 0.08em;
+  }
+
+  .action-list {
+    padding-left: 16px;
+    margin-top: 4px;
+  }
+
+  .action-list li {
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .kpi-badge {
+    display: inline-block;
+    background: var(--steel);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    margin-top: 4px;
+    letter-spacing: 0.08em;
+  }
+
+  /* FORMULA BLOCK */
+  .formula {
+    background: var(--ink);
+    color: #7fff7f;
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 2px;
+    display: inline-block;
+    margin: 4px 0;
+    letter-spacing: 0.05em;
+  }
+
+  .note {
+    font-size: 11px;
+    color: #777;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* PRIORITY MATRIX */
+  .matrix-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    margin: 24px 0;
+    max-width: 700px;
+  }
+
+  .matrix-cell {
+    background: var(--pale);
+    padding: 20px;
+  }
+
+  .matrix-cell .quad-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .matrix-cell h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .matrix-cell ul {
+    list-style: none;
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+
+  .matrix-cell ul li::before {
+    content: '→ ';
+    color: var(--gold);
+  }
+
+  .matrix-axis-x, .matrix-axis-y {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #777;
+    padding: 6px;
+  }
+
+  .matrix-axis-y {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+  }
+
+  .axis-wrap {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 4px;
+    max-width: 724px;
+    margin: 24px 0;
+  }
+
+  .highlight-row {
+    background: #f0ede4 !important;
+  }
+
+  .big-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+
+  footer {
+    margin-top: 60px;
+    border-top: 2px solid var(--ink);
+    padding-top: 16px;
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="label">Strategic Analysis · Live Commerce · Customer Acquisition</div>
+  <h1>The <em>Revenue Architecture</em><br>of Live Shopping</h1>
+  <p class="subtitle">A PhD-level audit of your event runbook and a first-principles framework for acquiring, converting, and compounding customers at scale.</p>
+</div>
+
+
+<!-- TABLE 1: RUNBOOK AUDIT -->
+<div class="section-title">Table 1 <span>Runbook Audit — Agreement & Gaps</span></div>
+<div class="tbl-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>What the Runbook Says</th>
+      <th>Verdict</th>
+      <th>What's Missing / Should Expand</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="tier-1">
+      <td>0 · Offer + Audience Fit</td>
+      <td>Choose narrow theme, define one KPI, stack lots by conversion logic (hook → margin → hero → clearance).</td>
+      <td><span class="pill pill-agree">Strongly Agree</span></td>
+      <td>Add <strong>willingness-to-pay segmentation</strong> before theming. Use past purchase data or a 2-question pre-event poll. Also: lot stack should reflect <em>price anchoring theory</em> — open with a high-perceived-value item to set the reference price ceiling for everything that follows.</td>
+    </tr>
+    <tr class="tier-1">
+      <td>1 · Acquisition Sprint</td>
+      <td>60-min daily outreach block; 10 prospects, 10 DMs, 10 follow-ups; reminder cadence at T-72h to T-15m.</td>
+      <td><span class="pill pill-partial">Partial — Tactical Only</span></td>
+      <td>This is activity-based, not model-based. Missing: <strong>CAC tracking per channel</strong>, viral/referral coefficient, and channel-specific conversion benchmarks. The cadence is fine for Day 1 but doesn't scale. Needs a compounding acquisition engine, not just manual outreach volume.</td>
+    </tr>
+    <tr class="tier-2">
+      <td>2 · Event Architecture</td>
+      <td>Role assignment (host, ops, chat closer, fallback); RTC-first; one active publisher.</td>
+      <td><span class="pill pill-agree">Agree</span></td>
+      <td>Expand to include <strong>chat moderation script</strong> — not just "answer buyer actions" but specific language patterns that suppress doubt, resolve objections, and amplify social proof. Chat is a conversion surface, not just a support channel.</td>
+    </tr>
+    <tr class="tier-2">
+      <td>3 · Rehearsal Protocol</td>
+      <td>Full dress rehearsal; failure drills; 15-min go/no-go checklist.</td>
+      <td><span class="pill pill-agree">Agree</span></td>
+      <td>Add a <strong>cognitive load audit</strong>: run rehearsal with a second viewer watching the host and rating confusion moments on a 1–5 scale. Buyers make sub-3-second buy/don't-buy decisions; confusion is conversion death.</td>
+    </tr>
+    <tr class="tier-1">
+      <td>4 · Live Execution</td>
+      <td>Lot cycle: context → proof → price anchor → offer → urgency → close prompt → confirmation.</td>
+      <td><span class="pill pill-agree">Strongly Agree</span></td>
+      <td>The lot cycle is essentially a miniature <strong>AIDA funnel</strong> (Attention, Interest, Desire, Action) executed in 90 seconds. Deeply sound. Missing: <strong>social proof escalation</strong> — explicitly name how many viewers are watching; say "47 people watching this lot right now" even if only 12 are live.</td>
+    </tr>
+    <tr class="tier-3">
+      <td>5 · Incident Response</td>
+      <td>Audio/video recovery; backup device; chat confusion pause.</td>
+      <td><span class="pill pill-agree">Agree</span></td>
+      <td>Add <strong>psychological recovery script</strong>: incidents erode perceived trust. After any recovery, immediately re-anchor buyer confidence with a brief value statement: "Still here, still live, still guaranteed." Trust is not auto-restored by reconnecting video.</td>
+    </tr>
+    <tr class="tier-2">
+      <td>6 · Closing the Door</td>
+      <td>Last call → recap top wins → final CTA → thank buyers → preview next event.</td>
+      <td><span class="pill pill-agree">Agree</span></td>
+      <td>Missing: <strong>soft commitment capture</strong> at close. Ask viewers to type "NEXT" in chat if they want first access to next event. This is a zero-friction micro-commitment that activates consistency bias — people who say they'll return actually do at ~3× the rate of passive viewers.</td>
+    </tr>
+    <tr class="tier-1">
+      <td>7 · Post-Event Loop</td>
+      <td>Confirm orders, debrief metrics, write top 3 fixes only.</td>
+      <td><span class="pill pill-partial">Partial — Underweighted</span></td>
+      <td>This phase is the highest ROI phase and it gets the fewest words. <strong>Post-event monetization</strong> should include: replay repurposing into 3–5 short clips, a "Missed It?" email sequence with 2 abandoned-cart mechanics, and an LTV model that tags buyer cohorts by acquisition event. One-time buyers are a cost center; repeat buyers are the business.</td>
+    </tr>
+    <tr class="tier-3">
+      <td>Weekly Rhythm</td>
+      <td>Mon–Sun task map covering sourcing → outreach → content → execution → review.</td>
+      <td><span class="pill pill-partial">Partial</span></td>
+      <td>Rhythm is sound but missing <strong>compounding loops</strong>: content from each event should feed next week's acquisition (clips, testimonials, lot reveals). Without this, each cycle is independent effort rather than a flywheel. The weekly rhythm should show how outputs from one event become inputs for the next.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- TABLE 2: CUSTOMER ACQUISITION DEEP DIVE -->
+<div class="section-title">Table 2 <span>PhD-Level Customer Acquisition — 9 Dimensions</span></div>
+<div class="tbl-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>Academic Grounding</th>
+      <th>What It Means for You</th>
+      <th>Tactical Execution</th>
+      <th>Measurable Signal</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="tier-1 highlight-row">
+      <td>1 · Viral Coefficient (K-Factor)</td>
+      <td>Epidemiological diffusion model; applied to products by Andrew Chen & Sequoia. K = (invitations sent per user) × (conversion rate of invites). K > 1 = exponential growth.</td>
+      <td>Your current runbook relies entirely on <em>you</em> doing outreach. If K &lt; 1, every event requires the same effort. Build K > 1 and events grow themselves.</td>
+      <td>Offer "Bring a Buyer" incentive: existing attendees get $5 store credit for every new buyer they refer. Track referral codes per person. Target K = 1.2 minimum by event 6.</td>
+      <td><span class="kpi-badge">K-factor per event</span><br>Referral conversion rate</td>
+    </tr>
+    <tr class="tier-1">
+      <td>2 · Jobs-to-Be-Done (JTBD)</td>
+      <td>Clayton Christensen, Harvard. Customers don't buy products — they "hire" them to accomplish a job. The job has functional, social, and emotional dimensions.</td>
+      <td>Your buyers aren't hiring you to "buy a vintage jacket." They're hiring you to feel the thrill of a live win, gain social proof ("I got the rare one"), and reduce the anxiety of not knowing what to collect next.</td>
+      <td>Run 5 post-purchase voice interviews. Ask: "What was happening in your life that made you decide to join tonight?" The verbatim answer rewrites all your marketing copy. Map 3 JTBD jobs. Build one ad creative per job.</td>
+      <td><span class="kpi-badge">Purchase motivation clusters</span><br>Message-market resonance score</td>
+    </tr>
+    <tr class="tier-2">
+      <td>3 · Diffusion of Innovation</td>
+      <td>Everett Rogers (1962). Adoption follows a bell curve: Innovators (2.5%) → Early Adopters (13.5%) → Early Majority → Late Majority → Laggards. The "chasm" between early adopters and early majority is where most businesses die.</td>
+      <td>Your first 50 buyers are Innovators/Early Adopters — highly motivated, tolerant of rough edges, intrinsically curious. Do NOT optimize acquisition for the mass market yet. Over-invest in making these 50 people feel like insiders. They become your bridge across the chasm.</td>
+      <td>Create a named VIP tier ("Founding Buyers") for first 50 customers. Give them early lot access, name them on stream, and solicit their feedback publicly. This leverages <em>social identity theory</em> — people act consistently with the identity you assign them.</td>
+      <td><span class="kpi-badge">Cohort 1 repeat rate</span><br>Referrals from cohort 1</td>
+    </tr>
+    <tr class="tier-2">
+      <td>4 · Behavioral Economics — Scarcity & Loss Aversion</td>
+      <td>Kahneman & Tversky (1979): losses loom ~2× larger than equivalent gains. Cialdini (1984): scarcity is one of the 6 core influence principles. FOMO is a behavioral loop, not a tactic.</td>
+      <td>Your runbook mentions urgency but doesn't distinguish <em>real scarcity</em> from <em>fabricated scarcity</em>. Buyers can sense artificial urgency and it destroys trust permanently. Only use scarcity you can prove live (show inventory count on camera).</td>
+      <td>Use live inventory visualization: hold up the physical items and say "three of these in hand." Say "when this goes, it's gone — I won't be re-sourcing this." Frame unsold lots as "the one that got away" in post-event recap to build FOMO for next event.</td>
+      <td><span class="kpi-badge">Lot sell-through rate</span><br>Re-engagement rate from FOMO content</td>
+    </tr>
+    <tr class="tier-1">
+      <td>5 · RFM Cohort Segmentation</td>
+      <td>Recency, Frequency, Monetary model (Hughes, 1994). Proven in direct marketing, e-commerce, and subscription businesses. Predicts future purchase probability from 3 behavioral signals.</td>
+      <td>Not all buyers are equal. A buyer who attended 3 events in the last month and spent $300 total is worth 10× a one-time $30 buyer in terms of acquisition cost amortization. You need a tiered model from event 1.</td>
+      <td>After event 3, score every buyer on R/F/M (1–5 each). Top-tier buyers (score 12–15) get personal outreach before next event. Mid-tier (7–11) get the standard reminder sequence. Low-tier (≤6) get a re-engagement offer ("Haven't seen you — here's $10 back").</td>
+      <td><span class="kpi-badge">LTV by RFM tier</span><br>Reactivation rate from low-tier campaign</td>
+    </tr>
+    <tr class="tier-2">
+      <td>6 · Network Effects & Platform Economics</td>
+      <td>Metcalfe's Law: value of a network scales with n². Applied to marketplaces by Eisenmann, Parker & Van Alstyne (2006). Live shopping is a two-sided market: viewers and sellers.</td>
+      <td>The more live viewers you have, the more valuable the experience is for <em>every individual viewer</em> (social validation, competitive bidding, chat energy). Viewer count is itself a product feature, not just a vanity metric. Low-viewer events are self-defeating.</td>
+      <td>Seed early viewers strategically: invite 10–15 trusted contacts to join the first 3 minutes of every event, even if they won't buy, purely to raise apparent viewer count. This is not deception — it's social priming. Also: share live viewer count verbally ("We've got 60 people here tonight") to create crowd-pull effect.</td>
+      <td><span class="kpi-badge">Peak concurrent viewers</span><br>Correlation: viewer count → conversion rate</td>
+    </tr>
+    <tr class="tier-3">
+      <td>7 · Content Flywheel & SEO Compounding</td>
+      <td>Content marketing as a compounding asset (Dharmesh Shah, HubSpot). Each piece of content has a decay function; SEO/social content has a long tail. Replays are permanently searchable.</td>
+      <td>Your runbook treats each event as standalone. Every event is actually a content factory producing 30+ repurposable assets: clips, product close-ups, buyer reactions, objection responses. These accumulate into an organic acquisition channel that costs nothing after production.</td>
+      <td>After every event: extract 5 clips (30–60 sec). Post 1/day across the week. Use lot titles as searchable text: "Vintage Levi's Type II 1960s — Live Find." These rank on YouTube and TikTok searches from collectors who weren't at your event. Each clip is a passive acquisition touchpoint.</td>
+      <td><span class="kpi-badge">Organic reach per clip</span><br>New-viewer attribution from content</td>
+    </tr>
+    <tr class="tier-1">
+      <td>8 · Community-Led Growth (CLG)</td>
+      <td>Emergent model documented by Commsor (2021), validated by Discord, Figma, Notion. Community precedes product adoption; members acquire each other. CAC in CLG models approaches $0 at scale.</td>
+      <td>Your highest-value buyers are not a list — they are a latent community waiting to be activated. A Discord or private Telegram group for returning buyers creates peer-to-peer acquisition: they bring each other to your events without your involvement.</td>
+      <td>After event 3, invite top 20 buyers to a private "Collector's Channel." Post: lot previews 48h early, behind-the-scenes sourcing, community polls on what to source next. This serves 3 functions: retention, acquisition referral, and product research. Make members feel like co-curators, not just customers.</td>
+      <td><span class="kpi-badge">Community-referred attendees</span><br>Community member retention rate at 30/60/90 days</td>
+    </tr>
+    <tr class="tier-3">
+      <td>9 · Attribution Modeling & CAC Optimization</td>
+      <td>Multi-touch attribution (Berman, 2018). Not all acquisition channels contribute equally. First-touch, last-touch, and linear models each reveal different optimization levers. Without attribution, you optimize by intuition — and that's expensive.</td>
+      <td>The runbook has zero measurement of where buyers came from. This means you can't double down on what works or kill what doesn't. By event 5 you should know: which channel produces the cheapest buyer, which produces the highest-LTV buyer, and which produces the fastest second purchase.</td>
+      <td>Assign a unique join code per acquisition channel (DM outreach = "DM01", Instagram post = "IG01", referral = "REF01"). Ask buyers at checkout or in post-event survey: "How did you hear about tonight?" Map to channel. After 5 events, cut bottom 2 channels. Double spend on top 2.</td>
+      <td><span class="kpi-badge">CAC by channel</span><br>LTV:CAC ratio by channel</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- TABLE 3: PRIORITY MATRIX — What to Do First -->
+<div class="section-title">Table 3 <span>Implementation Sequencing — 3 Horizons</span></div>
+<div class="tbl-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Horizon</th>
+      <th>Timeframe</th>
+      <th>Priority Actions</th>
+      <th>Academic Lever</th>
+      <th>Expected Outcome</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="tier-1 highlight-row">
+      <td>H1 · Survive & Prove</td>
+      <td>Events 1–3</td>
+      <td>
+        1. Run JTBD buyer interviews (5 calls)<br>
+        2. Add referral code tracking<br>
+        3. Name and honor first 50 buyers<br>
+        4. Post 3 clips per event
+      </td>
+      <td>JTBD · Diffusion of Innovation · K-Factor seeds</td>
+      <td>Understand why buyers buy. Build founding cohort. Generate first organic content assets. Discover your actual CAC.</td>
+    </tr>
+    <tr class="tier-2">
+      <td>H2 · Systematize & Scale</td>
+      <td>Events 4–8</td>
+      <td>
+        1. Launch private community (Discord/Telegram)<br>
+        2. Build RFM model from buyer data<br>
+        3. Launch Bring-a-Buyer referral program<br>
+        4. Map attribution by channel
+      </td>
+      <td>CLG · RFM · K-Factor optimization · Attribution</td>
+      <td>Community lowers CAC. Repeat-buyer rate rises. Referral channel begins contributing 10–20% of new attendees. Channel optimization cuts wasted outreach time by 40%.</td>
+    </tr>
+    <tr class="tier-3">
+      <td>H3 · Compound & Automate</td>
+      <td>Events 9+</td>
+      <td>
+        1. Content flywheel produces 5 clips/event (auto-schedule)<br>
+        2. Abandoned-viewer re-engagement email sequence<br>
+        3. LTV-based ad spend (paid acquisition only for high-LTV segments)<br>
+        4. Introduce waitlist mechanic (artificial scarcity at event level)
+      </td>
+      <td>Content compounding · Scarcity · Network effects · Paid + organic mix</td>
+      <td>Organic acquisition now contributes 30%+ of new viewers. Paid acquisition is ROI-positive because LTV is measured. Each event requires less manual outreach than the last.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+<!-- TABLE 4: THE ONE METRIC THAT MATTERS MOST PER PHASE -->
+<div class="section-title">Table 4 <span>North Star Metrics — One Number Per Phase</span></div>
+<div class="tbl-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>North Star Metric</th>
+      <th>Why This One</th>
+      <th>Target Benchmark</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Pre-Event Acquisition</td>
+      <td>Qualified Registrants (not just reach)</td>
+      <td>Reach is vanity. A qualified registrant has taken an action (RSVP, DM reply, poll response) signaling intent. 100 qualified &gt; 1,000 passive followers.</td>
+      <td>Aim for 15–30 qualified registrants per event in H1; 50–80 in H2</td>
+    </tr>
+    <tr class="highlight-row">
+      <td>Live Event</td>
+      <td>Buyer Conversion Rate (Buyers ÷ Peak Viewers)</td>
+      <td>Measures your live selling effectiveness independent of audience size. Industry benchmark for strong live shopping: 8–15%. Top performers: 20%+.</td>
+      <td>Target ≥10% by event 3; ≥15% by event 8</td>
+    </tr>
+    <tr>
+      <td>Post-Event Retention</td>
+      <td>Second-Purchase Rate (within 30 days)</td>
+      <td>First purchase is an experiment. Second purchase is a behavior. A buyer who returns within 30 days has ~65% probability of becoming a long-term repeat buyer (RFM literature).</td>
+      <td>Target ≥25% second-purchase rate by event 5</td>
+    </tr>
+    <tr class="highlight-row">
+      <td>Acquisition Engine</td>
+      <td>K-Factor (Viral Coefficient)</td>
+      <td>The single metric that tells you if your business grows itself or requires constant manual input. K &lt; 1 = treadmill. K &gt; 1 = compounding growth.</td>
+      <td>K ≥ 0.5 by event 5; K ≥ 1.0 by event 12</td>
+    </tr>
+    <tr>
+      <td>Business Health</td>
+      <td>LTV:CAC Ratio</td>
+      <td>The master ratio of business viability. LTV:CAC &lt; 1 = you're paying to exist. LTV:CAC &gt; 3 = healthy economics. &gt; 5 = you should be accelerating spend.</td>
+      <td>Target LTV:CAC ≥ 3:1 by event 10</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+<footer>
+  Analysis grounded in: Rogers (1962) Diffusion of Innovations · Christensen (1997) Jobs-to-Be-Done · Kahneman & Tversky (1979) Prospect Theory · Cialdini (1984) Influence · Hughes (1994) RFM Modeling · Eisenmann, Parker & Van Alstyne (2006) Platform Economics · Berman (2018) Multi-Touch Attribution · Chen (2019) K-Factor Growth · Commsor (2021) Community-Led Growth. Compiled for applied live commerce strategy. Not financial advice.
+</footer>
+
+</body>
+</html>
