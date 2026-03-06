@@ -254,6 +254,10 @@ Migrated routes include:
 - Live architecture guidance added:
    - RTC-first now, hybrid RTC+RTMP later after ingest stability and rehearsal gates.
    - Checklist doc: [My Docs/rtc-to-hybrid-rtmp-switch-checklist.md](My%20Docs/rtc-to-hybrid-rtmp-switch-checklist.md)
+- Media Push/RTMP policy (current):
+   - Media Push / RTMP ingest is intentionally excluded from scope.
+   - Reason: additional service cost plus setup/initialization complexity makes it cost-prohibitive and unnecessary for current event goals.
+   - Execution policy: run RTC-only live events for now.
 - One-camera starter recommendation:
    - Use the newer Logitech 1080p camera, but run stream output at 720p/30fps for first events.
    - Move to 1080p only after confirming stable upload and no RTC quality regressions.
@@ -262,7 +266,7 @@ Migrated routes include:
    - Use one monitoring path only (Yeti direct monitor preferred; software monitor off).
    - Quick reference: [using headphones.md](using%20headphones.md)
 
-Last validated: `2026-03-05`
+Last validated: `2026-03-06`
 
 ## Lot Decoder (Hidden Metrics)
 
