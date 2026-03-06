@@ -257,6 +257,10 @@ Migrated routes include:
 - One-camera starter recommendation:
    - Use the newer Logitech 1080p camera, but run stream output at 720p/30fps for first events.
    - Move to 1080p only after confirming stable upload and no RTC quality regressions.
+- Headphone rule for first live events:
+   - Use wired headphones plugged into Blue Yeti Nano headphone output.
+   - Use one monitoring path only (Yeti direct monitor preferred; software monitor off).
+   - Quick reference: [using headphones.md](using%20headphones.md)
 
 Last validated: `2026-03-05`
 
