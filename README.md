@@ -245,6 +245,21 @@ Migrated routes include:
 - `/api/auction-notices` (create, list, review)
 - `/api/agora/token` host authorization guest lookup
 
+## Recent Security + Architecture Updates
+
+- Supabase view hardening: `public.auction_analytics` now uses `security_invoker = true`.
+   - Migration: [supabase/migrations/20260304_000004_fix_auction_analytics_security_invoker.sql](supabase/migrations/20260304_000004_fix_auction_analytics_security_invoker.sql)
+- Supabase function risk reduction: execution access for `public.rls_auto_enable()` restricted to `postgres` and `service_role`.
+   - Migration (repo-tracked follow-up): [supabase/migrations/20260304_000005_fix_rls_auto_enable_security_invoker.sql](supabase/migrations/20260304_000005_fix_rls_auto_enable_security_invoker.sql)
+- Live architecture guidance added:
+   - RTC-first now, hybrid RTC+RTMP later after ingest stability and rehearsal gates.
+   - Checklist doc: [My Docs/rtc-to-hybrid-rtmp-switch-checklist.md](My%20Docs/rtc-to-hybrid-rtmp-switch-checklist.md)
+- One-camera starter recommendation:
+   - Use the newer Logitech 1080p camera, but run stream output at 720p/30fps for first events.
+   - Move to 1080p only after confirming stable upload and no RTC quality regressions.
+
+Last validated: `2026-03-05`
+
 ## Lot Decoder (Hidden Metrics)
 
 The Lot Decoder feature tracks projected lot value, sold value, and leftover eventual value for live shopping sessions.
